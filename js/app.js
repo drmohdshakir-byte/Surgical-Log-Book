@@ -184,10 +184,10 @@
     $('#recCount').textContent = list.length + ' of ' + S.all().length + ' records';
     $('#pageInfo').textContent = 'Page ' + (state.page + 1) + ' / ' + pages;
     $('#recTable tbody').innerHTML = slice.map(function (e) {
-      return '<tr><td>' + esc(e.date) + '</td><td>' + esc(T.domainName(e.domain)) + '</td><td title="' + esc(e.diagnosis || '') + '">' + esc(e.procedure) + (e.additional ? ' <span class="muted small">' + esc(e.additional) + '</span>' : '') +
+      return '<tr><td>' + esc(e.date) + '</td><td>' + esc(e.patientName || e.patientRef || '') + (e.mrn ? ' <span class="muted small">' + esc(e.mrn) + '</span>' : '') + '</td><td>' + esc(T.domainName(e.domain)) + '</td><td title="' + esc(e.diagnosis || '') + '">' + esc(e.procedure) + (e.additional ? ' <span class="muted small">' + esc(e.additional) + '</span>' : '') +
         '</td><td title="' + esc(T.roleLabel(e.role)) + '">' + esc(e.role) + '</td><td>' + esc(e.approach) + '</td><td>' + esc(e.complexity) + '</td><td>' + esc(e.facility) + '</td><td>' + esc(e.complication === 'NONE' ? '–' : e.complication) +
         '</td><td class="nowrap"><button class="ghost sm" data-edit="' + esc(e.id) + '">Edit</button><button class="ghost sm" data-del="' + esc(e.id) + '">Delete</button></td></tr>';
-    }).join('') || '<tr><td colspan="9" class="empty">No records match.</td></tr>';
+    }).join('') || '<tr><td colspan="10" class="empty">No records match.</td></tr>';
     $$('#recTable th').forEach(function (th) { th.classList.toggle('sorted', th.dataset.sort === k); th.dataset.dir = th.dataset.sort === k ? (d > 0 ? '▲' : '▼') : ''; });
     state.lastRecordList = list;
   }
@@ -212,6 +212,18 @@
         '</tbody><tfoot><tr><td>Domain total</td>' + ROLE_KEYS.map(function (r) { return '<td>' + t[r] + '</td>'; }).join('') + '<td>' + t.total + '</td><td colspan="2"></td></tr></tfoot></table>';
     }).join('') || '<p class="empty">No records in this period.</p>';
     state.lastPriv = sum;
+    state.lastPrivList = list.slice().sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+    $('#privCaseList').innerHTML = $('#privCases').checked ? '<h3 class="domain-h case-h">Appendix — case list for verification (' + list.length + ')</h3><p class="small muted">Contains patient identifiers. Confidential — for the credentialing committee only.</p>' +
+      '<table class="tbl cases"><thead><tr><th>#</th><th>Date</th><th>Patient name</th><th>NRIC / ID</th><th>HRN</th><th>Procedure</th><th>Role</th><th>Facility</th></tr></thead><tbody>' +
+      state.lastPrivList.map(function (e, i) { return '<tr><td>' + (i + 1) + '</td><td>' + esc(e.date) + '</td><td>' + esc(e.patientName) + '</td><td>' + esc(e.patientId) + '</td><td>' + esc(e.mrn) + '</td><td>' + esc(e.procedure) + '</td><td>' + esc(e.role) + '</td><td>' + esc(e.facility) + '</td></tr>'; }).join('') +
+      '</tbody></table>' : '';
+  }
+
+  function casesCsv() {
+    var cols = ['date', 'patientName', 'patientId', 'mrn', 'patientRef', 'facility', 'domain', 'procedure', 'role', 'supervisorTrainee', 'diagnosis'];
+    return '\uFEFF' + [cols.join(',')].concat((state.lastPrivList || []).map(function (e) {
+      return cols.map(function (k) { var c = k === 'domain' ? T.domainName(e.domain) : String(e[k] || ''); if (/^[=+\-@]/.test(c)) c = "'" + c; return /[",\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c; }).join(',');
+    })).join('\r\n');
   }
 
   function privCsv() {
@@ -287,6 +299,8 @@
     $('#printPriv').addEventListener('click', function () { window.print(); });
     $('#csvPriv').addEventListener('click', function () { download('privileging-summary-' + today() + '.csv', privCsv(), 'text/csv'); });
     $('#privShowAll').addEventListener('change', renderPrivileging);
+    $('#privCases').addEventListener('change', renderPrivileging);
+    $('#csvCases').addEventListener('click', function () { download('case-list-CONFIDENTIAL-' + today() + '.csv', casesCsv(), 'text/csv'); });
 
     $('#cvTop').addEventListener('change', renderCv);
     $('#copyCv').addEventListener('click', function () { navigator.clipboard.writeText($('#cvText').textContent).then(function () { $('#copyCv').textContent = 'Copied ✓'; setTimeout(function () { $('#copyCv').textContent = 'Copy to clipboard'; }, 2000); }); });

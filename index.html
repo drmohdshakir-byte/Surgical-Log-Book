@@ -71,7 +71,7 @@
   <section id="tab-entry" class="tab">
     <form id="entryForm" class="card form" autocomplete="off">
       <h2 id="formTitle">New log entry</h2>
-      <p class="warn small">Do not record names, IC/passport numbers or full MRNs. Use a de-identified reference (e.g. your own code) — see docs/PRIVACY.md.</p>
+      <p class="warn small">Patient identifiers are kept only in this browser and in files you export, for verification by credentialing authorities. Keep backups secure and never upload them to the public repository — see docs/PRIVACY.md.</p>
       <input type="hidden" name="id">
       <fieldset><legend>When &amp; where</legend>
         <label>Date* <input type="date" name="date" required></label>
@@ -79,8 +79,11 @@
         <label>Setting <select name="setting"></select></label>
         <label>Urgency <select name="urgency"></select></label>
       </fieldset>
-      <fieldset><legend>Patient (de-identified)</legend>
-        <label>Patient ref <input name="patientRef" placeholder="non-identifying code"></label>
+      <fieldset><legend>Patient</legend>
+        <label class="wide">Patient name <input name="patientName"></label>
+        <label>NRIC / passport <input name="patientId"></label>
+        <label>HRN / MRN <input name="mrn"></label>
+        <label>Case ref <input name="patientRef" placeholder="e.g. registry ID"></label>
         <label>Age (y) <input name="age" type="number" min="0" max="120" step="1"></label>
         <label>Sex <select name="sex"><option></option><option>M</option><option>F</option></select></label>
         <label class="wide">Diagnosis / indication <input name="diagnosis" placeholder="e.g. 25% TBSA flame burn, deep dermal"></label>
@@ -120,12 +123,12 @@
   <section id="tab-records" class="tab">
     <div class="card">
       <div class="row">
-        <input id="search" type="search" placeholder="Search procedure, diagnosis, tags, notes…" class="grow">
+        <input id="search" type="search" placeholder="Search patient, NRIC, HRN, procedure, diagnosis, notes…" class="grow">
         <span class="muted" id="recCount"></span>
         <button id="exportFilteredCsv">Export these (CSV)</button>
       </div>
       <div class="scroll"><table class="tbl" id="recTable">
-        <thead><tr><th data-sort="date">Date</th><th data-sort="domain">Domain</th><th data-sort="procedure">Procedure</th><th data-sort="role">Role</th><th data-sort="approach">Approach</th><th data-sort="complexity">Cx</th><th data-sort="facility">Facility</th><th data-sort="complication">Compl.</th><th></th></tr></thead>
+        <thead><tr><th data-sort="date">Date</th><th data-sort="patientName">Patient</th><th data-sort="domain">Domain</th><th data-sort="procedure">Procedure</th><th data-sort="role">Role</th><th data-sort="approach">Approach</th><th data-sort="complexity">Cx</th><th data-sort="facility">Facility</th><th data-sort="complication">Compl.</th><th></th></tr></thead>
         <tbody></tbody>
       </table></div>
       <div class="row"><button id="prevPage" class="ghost">‹ Prev</button><span id="pageInfo" class="muted"></span><button id="nextPage" class="ghost">Next ›</button></div>
@@ -136,9 +139,12 @@
   <section id="tab-privileging" class="tab">
     <div class="card print-area">
       <div class="row noprint"><button id="printPriv" class="primary">Print / save as PDF</button><button id="csvPriv">Download summary (CSV)</button>
-        <label class="small"><input type="checkbox" id="privShowAll"> show every procedure (not just top 25 per domain)</label></div>
+        <label class="small"><input type="checkbox" id="privShowAll"> show every procedure (not just top 25 per domain)</label>
+        <label class="small"><input type="checkbox" id="privCases"> append case list with patient identifiers (for verification)</label>
+        <button id="csvCases">Download case list (CSV)</button></div>
       <div id="privHeader"></div>
       <div id="privBody"></div>
+      <div id="privCaseList"></div>
       <div class="signoff">
         <p>I declare that the above is a true summary of my personal log book for the stated period.</p>
         <div class="sig"><span>Signature: ____________________</span><span>Date: ______________</span></div>

@@ -3,13 +3,13 @@
 A personal, offline logbook for **Plastic, Reconstructive & Burns Surgery and Wound Care**. It covers invasive, minimally invasive and non-invasive procedures that you performed, assisted or supervised. It produces:
 
 - **Dashboard:** totals, role split, activity over time (monthly/yearly with a cumulative curve), case mix by domain and role, approach and complexity, top procedures, a domain × year heat-map, 12-month domain trends, and Clavien–Dindo complication rates with 95% confidence intervals.
-- **Privileging report:** counts per domain and procedure, split by role (P / PS / ST / SU / A / O), with the last date each procedure was done, for any period or facility. Prints to PDF with a declaration and HOD sign-off block, or downloads as CSV.
+- **Privileging report:** counts per domain and procedure, split by role (P / PS / ST / SU / A / O), with the last date each procedure was done, for any period or facility. An optional appendix lists every case with patient name, NRIC and HRN for verification. Prints to PDF with a declaration and HOD sign-off block, or downloads as CSV.
 - **CV / portfolio summary:** plain-text operative experience statement you can paste into a CV or appraisal.
 - **Records:** search, sort, edit and delete. Export any filtered view to CSV.
 - **Import / export:** full JSON backup, CSV/Excel export, and bulk CSV import from existing spreadsheets.
 
 ## Privacy first
-This repository is public, so it contains **code only**. Your records stay in your own browser (IndexedDB) and are never uploaded anywhere. Read [docs/PRIVACY.md](docs/PRIVACY.md) before your first entry: record de-identified references only, and export backups regularly.
+This repository is public, so it contains **code only**. Your records stay in your own browser (IndexedDB) and are never uploaded anywhere. Entries can hold patient name, NRIC and HRN for verification by credentialing authorities, so backups and exports are confidential medical data. Read [docs/PRIVACY.md](docs/PRIVACY.md) before your first entry.
 
 ## How to use
 **Option A: open locally.** Download the repository (Code → Download ZIP), unzip it, and open `index.html` in Chrome, Edge, Firefox or Safari. No installation or internet connection is needed.

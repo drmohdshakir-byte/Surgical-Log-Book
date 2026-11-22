@@ -8,7 +8,7 @@
   var SCHEMA_VERSION = 1;
 
   // Order here = CSV column order. See docs/DATA-DICTIONARY.md
-  var FIELDS = ['id', 'date', 'facility', 'setting', 'patientRef', 'age', 'sex', 'diagnosis', 'icd10',
+  var FIELDS = ['id', 'date', 'facility', 'setting', 'patientRef', 'patientName', 'patientId', 'mrn', 'age', 'sex', 'diagnosis', 'icd10',
     'domain', 'procedure', 'additional', 'approach', 'complexity', 'role', 'supervisorTrainee',
     'urgency', 'anaesthesia', 'laterality', 'durationMin', 'tbsa', 'complication', 'outcome',
     'tags', 'notes', 'createdAt', 'updatedAt'];

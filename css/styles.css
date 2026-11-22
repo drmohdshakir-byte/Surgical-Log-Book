@@ -101,3 +101,5 @@ footer { text-align: center; padding: 16px; }
   .tbl.priv { page-break-inside: auto; } .tbl.priv tr { page-break-inside: avoid; }
   .domain-h { page-break-after: avoid; }
 }
+.tbl.cases { font-size: 12px; }
+@media print { .case-h { page-break-before: always; } }

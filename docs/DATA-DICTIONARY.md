@@ -8,7 +8,10 @@ One row = one procedure episode in which you took part. CSV import and export us
 | **date** | `YYYY-MM-DD` (import also accepts `DD/MM/YYYY`) | Date of procedure. Future dates are rejected. |
 | facility | text | Hospital or centre. Used for facility-specific privileging reports. |
 | setting | Main OT · Daycare OT · Burns unit / burns OT · Procedure room / clinic · Ward / bedside · Emergency department · ICU · Outreach / visiting · Wound care clinic | |
-| patientRef | text | **De-identified** reference only. See PRIVACY.md. |
+| patientRef | text | Case reference, for example `SR-<registry SurgID>`. |
+| patientName | text | Patient full name, for verification by credentialing authorities. Identifiable: see PRIVACY.md. |
+| patientId | text | NRIC or passport number. Identifiable. |
+| mrn | text | Hospital registration number (HRN/MRN). Identifiable. |
 | age | 0–120 | Years. |
 | sex | M · F | |
 | diagnosis | text | Indication. |

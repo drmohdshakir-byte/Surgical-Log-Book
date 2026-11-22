@@ -53,6 +53,12 @@ test('import template parses cleanly', function () {
   var r = IO.fromCSV(fs.readFileSync(path.join(__dirname, '..', 'templates', 'import-template.csv'), 'utf8'));
   assert.strictEqual(r.errors.length, 0, JSON.stringify(r.errors)); assert.ok(r.ok.length >= 3);
 });
+test('patient identifiers survive CSV round-trip and are searchable', function () {
+  var x = e({ patientName: 'TEST PATIENT', patientId: '010101-01-0101', mrn: 'H123' });
+  var back = IO.fromCSV(IO.toCSV([x])).ok[0];
+  assert.strictEqual(back.patientName, 'TEST PATIENT'); assert.strictEqual(back.patientId, '010101-01-0101'); assert.strictEqual(back.mrn, 'H123');
+  assert.strictEqual(A.applyFilter([back], { text: 'h123' }).length, 1);
+});
 test('JSON round-trip', function () {
   var src = [e({}), e({ role: 'ST' })];
   var back = IO.fromJSON(IO.toJSON(src));

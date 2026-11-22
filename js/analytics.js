@@ -46,7 +46,7 @@
         else if (e.role !== f.role) return false;
       }
       if (text) {
-        var hay = [e.procedure, e.additional, e.diagnosis, e.icd10, e.tags, e.notes, e.patientRef, e.facility, e.supervisorTrainee].join(' ').toLowerCase();
+        var hay = [e.procedure, e.additional, e.diagnosis, e.icd10, e.tags, e.notes, e.patientRef, e.patientName, e.patientId, e.mrn, e.facility, e.supervisorTrainee].join(' ').toLowerCase();
         if (hay.indexOf(text) === -1) return false;
       }
       return true;

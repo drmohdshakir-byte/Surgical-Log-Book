@@ -12,3 +12,4 @@ privileging-summary-*.csv
 operative-experience-*.txt
 .DS_Store
 node_modules/
+case-list-*.csv
