@@ -1,0 +1,14 @@
+# Never commit patient-level data to this (public) repository
+*.json
+!package.json
+*.xlsx
+*.xls
+data/
+exports/
+backups/
+surgical-logbook-*.csv
+logbook-*.csv
+privileging-summary-*.csv
+operative-experience-*.txt
+.DS_Store
+node_modules/

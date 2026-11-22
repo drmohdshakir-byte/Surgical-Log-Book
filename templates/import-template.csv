@@ -1,0 +1,4 @@
+date,facility,setting,patientRef,age,sex,diagnosis,icd10,domain,procedure,additional,approach,complexity,role,supervisorTrainee,urgency,anaesthesia,laterality,durationMin,tbsa,complication,outcome,tags,notes
+14/03/2025,Hospital A,Burns unit / burns OT,X001,34,M,25% TBSA flame burn deep dermal,T31.2,BURN-AC,Tangential excision,+ STSG thigh donor,INV,3,ST,Trainee Dr B (scrubbed),Emergency,GA,Bilateral,150,25,NONE,Graft take 95% day 7,teaching,EXAMPLE ROW - delete before importing
+15/03/2025,Hospital A,Main OT,X002,52,F,Diabetic foot infection,,WOUND,Diabetic foot debridement,+ NPWT,INV,2,P,,Urgent / semi-elective,Spinal / epidural,Left,45,,UNK,,,EXAMPLE ROW - delete before importing
+2025-03-18,Hospital A,Daycare OT,X003,61,F,Carpal tunnel syndrome,G56.0,HAND,Carpal tunnel release,,INV,2,P,,Elective,WALANT,Right,20,,CD-II,Superficial wound infection treated with oral antibiotics,,EXAMPLE ROW - delete before importing

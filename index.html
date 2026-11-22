@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Surgical Log Book</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <strong>Surgical Log Book</strong>
+    <span class="muted" id="ownerLine">Plastic, Reconstructive &amp; Burns Surgery · Wound Care</span>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button data-tab="dashboard" class="active">Dashboard</button>
+    <button data-tab="entry">+ New entry</button>
+    <button data-tab="records">Records</button>
+    <button data-tab="privileging">Privileging</button>
+    <button data-tab="cv">CV / Portfolio</button>
+    <button data-tab="data">Data &amp; settings</button>
+  </nav>
+</header>
+
+<main>
+  <!-- Shared filter bar (dashboard, privileging, CV) -->
+  <section class="filters card" id="filters">
+    <label>From <input type="date" id="fFrom"></label>
+    <label>To <input type="date" id="fTo"></label>
+    <label>Quick
+      <select id="fQuick">
+        <option value="">All time</option>
+        <option value="12">Last 12 months</option>
+        <option value="36">Last 3 years</option>
+        <option value="60">Last 5 years</option>
+        <option value="ytd">This year</option>
+      </select>
+    </label>
+    <label>Facility <select id="fFacility"><option value="">All</option></select></label>
+    <label>Role
+      <select id="fRole"><option value="">All roles</option></select>
+    </label>
+    <label>Domain <select id="fDomain"><option value="">All domains</option></select></label>
+    <label>Approach <select id="fApproach"><option value="">All</option></select></label>
+    <button type="button" id="fReset" class="ghost">Reset</button>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section id="tab-dashboard" class="tab active">
+    <div class="kpis" id="kpis"></div>
+    <div class="grid2">
+      <div class="card"><h3>Activity over time</h3>
+        <div class="seg" id="tsPeriod"><button data-p="month" class="active">Monthly</button><button data-p="year">Yearly</button></div>
+        <div id="chTime"></div></div>
+      <div class="card"><h3>Case mix by domain &amp; role</h3><div id="chDomain"></div></div>
+      <div class="card"><h3>Approach</h3><div id="chApproach"></div>
+        <h3>Complexity</h3><div id="chComplexity"></div></div>
+      <div class="card"><h3>Top 15 procedures</h3><div id="chTopProc"></div></div>
+    </div>
+    <div class="card"><h3>Domain × year heat-map</h3><div id="heatmap" class="scroll"></div></div>
+    <div class="card"><h3>Domain trends <span class="muted small" id="trendNote"></span></h3>
+      <p class="muted small">Compares the last 12 months to the 12 months before (ending at the "To" date or today). With fewer than 10 cases in both windows combined, no direction is given because small counts mostly reflect chance.</p>
+      <div id="trends" class="scroll"></div></div>
+    <div class="card"><h3>Complications (Clavien–Dindo) by domain</h3>
+      <p class="muted small">Rates are calculated only over entries with a recorded outcome; 95% Wilson confidence intervals. Self-logged complication data under-reports compared with prospective audit — use for reflection, not benchmarking.</p>
+      <div id="complications" class="scroll"></div></div>
+  </section>
+
+  <!-- ENTRY -->
+  <section id="tab-entry" class="tab">
+    <form id="entryForm" class="card form" autocomplete="off">
+      <h2 id="formTitle">New log entry</h2>
+      <p class="warn small">Do not record names, IC/passport numbers or full MRNs. Use a de-identified reference (e.g. your own code) — see docs/PRIVACY.md.</p>
+      <input type="hidden" name="id">
+      <fieldset><legend>When &amp; where</legend>
+        <label>Date* <input type="date" name="date" required></label>
+        <label>Facility <input name="facility" list="dlFacility" placeholder="e.g. Hospital Sultanah Aminah"></label>
+        <label>Setting <select name="setting"></select></label>
+        <label>Urgency <select name="urgency"></select></label>
+      </fieldset>
+      <fieldset><legend>Patient (de-identified)</legend>
+        <label>Patient ref <input name="patientRef" placeholder="non-identifying code"></label>
+        <label>Age (y) <input name="age" type="number" min="0" max="120" step="1"></label>
+        <label>Sex <select name="sex"><option></option><option>M</option><option>F</option></select></label>
+        <label class="wide">Diagnosis / indication <input name="diagnosis" placeholder="e.g. 25% TBSA flame burn, deep dermal"></label>
+        <label>ICD-10 <input name="icd10" placeholder="optional, e.g. T31.2"></label>
+      </fieldset>
+      <fieldset><legend>Procedure</legend>
+        <label class="wide">Domain* <select name="domain" required></select></label>
+        <label class="wide">Procedure* <input name="procedure" list="dlProcedure" required placeholder="pick from list or type"></label>
+        <label class="wide">Additional procedures <input name="additional" placeholder="e.g. + STSG donor thigh; + NPWT"></label>
+        <label>Approach* <select name="approach" required></select></label>
+        <label>Complexity <select name="complexity"></select></label>
+        <label>Laterality <select name="laterality"><option></option><option>Left</option><option>Right</option><option>Bilateral</option><option>Midline / N/A</option></select></label>
+        <label>Anaesthesia <select name="anaesthesia"></select></label>
+        <label>Duration (min) <input name="durationMin" type="number" min="0" step="5"></label>
+        <label>TBSA % (burns) <input name="tbsa" type="number" min="0" max="100" step="0.5"></label>
+      </fieldset>
+      <fieldset><legend>Your role</legend>
+        <label class="wide">Role* <select name="role" required></select></label>
+        <label class="wide">Supervisor / trainee / team <input name="supervisorTrainee" placeholder="e.g. Dr A (trainee, scrubbed)"></label>
+      </fieldset>
+      <fieldset><legend>Outcome</legend>
+        <label class="wide">Complication <select name="complication"></select></label>
+        <label class="wide">Outcome / follow-up <input name="outcome" placeholder="e.g. 100% graft take at day 7"></label>
+        <label class="wide">Tags <input name="tags" placeholder="comma-separated: teaching, outreach, research-cohort-A"></label>
+        <label class="full">Notes / reflection <textarea name="notes" rows="3"></textarea></label>
+      </fieldset>
+      <div class="actions">
+        <button type="submit" class="primary" id="saveBtn">Save entry</button>
+        <button type="button" id="saveAnother">Save &amp; add similar</button>
+        <button type="button" class="ghost" id="cancelEdit">Clear</button>
+        <span id="formMsg" class="msg"></span>
+      </div>
+    </form>
+  </section>
+
+  <!-- RECORDS -->
+  <section id="tab-records" class="tab">
+    <div class="card">
+      <div class="row">
+        <input id="search" type="search" placeholder="Search procedure, diagnosis, tags, notes…" class="grow">
+        <span class="muted" id="recCount"></span>
+        <button id="exportFilteredCsv">Export these (CSV)</button>
+      </div>
+      <div class="scroll"><table class="tbl" id="recTable">
+        <thead><tr><th data-sort="date">Date</th><th data-sort="domain">Domain</th><th data-sort="procedure">Procedure</th><th data-sort="role">Role</th><th data-sort="approach">Approach</th><th data-sort="complexity">Cx</th><th data-sort="facility">Facility</th><th data-sort="complication">Compl.</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <div class="row"><button id="prevPage" class="ghost">‹ Prev</button><span id="pageInfo" class="muted"></span><button id="nextPage" class="ghost">Next ›</button></div>
+    </div>
+  </section>
+
+  <!-- PRIVILEGING -->
+  <section id="tab-privileging" class="tab">
+    <div class="card print-area">
+      <div class="row noprint"><button id="printPriv" class="primary">Print / save as PDF</button><button id="csvPriv">Download summary (CSV)</button>
+        <label class="small"><input type="checkbox" id="privShowAll"> show every procedure (not just top 25 per domain)</label></div>
+      <div id="privHeader"></div>
+      <div id="privBody"></div>
+      <div class="signoff">
+        <p>I declare that the above is a true summary of my personal log book for the stated period.</p>
+        <div class="sig"><span>Signature: ____________________</span><span>Date: ______________</span></div>
+        <div class="sig"><span>Verified by (Head of Department): ____________________</span><span>Date: ______________</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CV -->
+  <section id="tab-cv" class="tab">
+    <div class="card">
+      <div class="row"><button id="copyCv" class="primary">Copy to clipboard</button><button id="dlCv">Download .txt</button>
+        <label class="small">Top procedures per domain <input type="number" id="cvTop" value="5" min="0" max="50" style="width:4em"></label></div>
+      <pre id="cvText" class="cv"></pre>
+    </div>
+  </section>
+
+  <!-- DATA & SETTINGS -->
+  <section id="tab-data" class="tab">
+    <div class="grid2">
+      <div class="card"><h3>Profile</h3>
+        <form id="settingsForm" class="form">
+          <label class="wide">Name (for reports) <input name="name"></label>
+          <label>MMC / NSR no. <input name="regNo"></label>
+          <label class="wide">Position / department <input name="position" placeholder="e.g. Consultant Plastic Surgeon"></label>
+          <label class="wide">Default facility <input name="defaultFacility"></label>
+          <div class="actions"><button class="primary" type="submit">Save profile</button><span class="msg" id="setMsg"></span></div>
+        </form>
+      </div>
+      <div class="card"><h3>Backup &amp; export</h3>
+        <p class="small">Your records are stored <b>only in this browser</b> (<span id="backend"></span>). Clearing browser data deletes them. Export a JSON backup regularly and keep it in a secure, access-controlled location.</p>
+        <p class="small" id="lastBackup"></p>
+        <div class="row"><button id="exportJson" class="primary">Full backup (JSON)</button><button id="exportCsv">All records (CSV / Excel)</button></div>
+        <h3>Import</h3>
+        <p class="small">JSON backup from this app, or CSV using <a href="templates/import-template.csv" download>templates/import-template.csv</a>. Dates may be YYYY-MM-DD or DD/MM/YYYY. Entries with an existing id are updated, not duplicated.</p>
+        <input type="file" id="importFile" accept=".json,.csv,text/csv,application/json">
+        <pre id="importReport" class="small"></pre>
+      </div>
+      <div class="card"><h3>Demo data</h3>
+        <p class="small">Load 600 synthetic entries to explore the dashboards. They are tagged <code>demo</code> and can be removed in one click.</p>
+        <div class="row"><button id="loadDemo">Load demo data</button><button id="removeDemo" class="ghost">Remove demo entries</button></div>
+      </div>
+      <div class="card danger"><h3>Danger zone</h3>
+        <p class="small">Permanently delete every record in this browser. Export a backup first.</p>
+        <button id="wipe" class="danger-btn">Delete all records</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<datalist id="dlProcedure"></datalist>
+<datalist id="dlFacility"></datalist>
+<footer class="muted small">Offline · data stays on this device · <a href="https://github.com/drmohdshakir-byte/Surgical-Log-Book">source</a></footer>
+
+<script src="js/taxonomy.js"></script>
+<script src="js/analytics.js"></script>
+<script src="js/io.js"></script>
+<script src="js/store.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/demo.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
