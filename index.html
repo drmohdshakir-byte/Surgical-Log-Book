@@ -17,6 +17,7 @@
     <button data-tab="dashboard" class="active">Dashboard</button>
     <button data-tab="entry">+ New entry</button>
     <button data-tab="records">Records</button>
+    <button data-tab="yearly">Yearly report</button>
     <button data-tab="privileging">Privileging</button>
     <button data-tab="cv">CV / Portfolio</button>
     <button data-tab="data">Data &amp; settings</button>
@@ -71,45 +72,42 @@
   <section id="tab-entry" class="tab">
     <form id="entryForm" class="card form" autocomplete="off">
       <h2 id="formTitle">New log entry</h2>
-      <p class="warn small">Patient identifiers are kept only in this browser and in files you export, for verification by credentialing authorities. Keep backups secure and never upload them to the public repository — see docs/PRIVACY.md.</p>
+      <p class="warn small">Patient identifiers are kept only in this browser and in files you export. Share only with healthcare governing bodies and authorities; never upload backups to the public repository.</p>
       <input type="hidden" name="id">
-      <fieldset><legend>When &amp; where</legend>
-        <label>Date* <input type="date" name="date" required></label>
-        <label>Facility <input name="facility" list="dlFacility" placeholder="e.g. Hospital Sultanah Aminah"></label>
-        <label>Setting <select name="setting"></select></label>
-        <label>Urgency <select name="urgency"></select></label>
+      <fieldset class="core"><legend>Register entry</legend>
+        <label>1. Date* <input type="date" name="date" required></label>
+        <label class="wide">2. Name <input name="patientName"></label>
+        <label>3. NRIC / ID <input name="patientId"></label>
+        <label>4. Age (years) <input name="age" type="number" min="0" max="120" step="1"></label>
+        <label>5. Sex <select name="sex"><option value="">—</option><option value="M">Male</option><option value="F">Female</option></select></label>
+        <label class="full">6. Diagnosis <input name="diagnosis"></label>
+        <label class="full">7. Procedure* <input name="procedure" list="dlProcedure" required placeholder="start typing and pick from the list, or type your own"></label>
+        <label class="wide">8. Domain* <select name="domain" required></select></label>
+        <label class="full">9. Registry (operation as written in hospital registry) <textarea name="registry" rows="2"></textarea></label>
+        <label>10. Complexity <select name="complexity"></select></label>
+        <label class="wide">11. Role* <select name="role" required></select></label>
+        <label>12. Urgency <select name="urgency"></select></label>
+        <label>13. Anaesthesia <select name="anaesthesia"></select></label>
+        <label class="full">14. Remark (outcome / complication) <textarea name="remark" rows="2" placeholder="e.g. graft take 95%; SSI treated with oral antibiotics"></textarea></label>
       </fieldset>
-      <fieldset><legend>Patient</legend>
-        <label class="wide">Patient name <input name="patientName"></label>
-        <label>NRIC / passport <input name="patientId"></label>
-        <label>HRN / MRN <input name="mrn"></label>
-        <label>Case ref <input name="patientRef" placeholder="e.g. registry ID"></label>
-        <label>Age (y) <input name="age" type="number" min="0" max="120" step="1"></label>
-        <label>Sex <select name="sex"><option></option><option>M</option><option>F</option></select></label>
-        <label class="wide">Diagnosis / indication <input name="diagnosis" placeholder="e.g. 25% TBSA flame burn, deep dermal"></label>
-        <label>ICD-10 <input name="icd10" placeholder="optional, e.g. T31.2"></label>
-      </fieldset>
-      <fieldset><legend>Procedure</legend>
-        <label class="wide">Domain* <select name="domain" required></select></label>
-        <label class="wide">Procedure* <input name="procedure" list="dlProcedure" required placeholder="pick from list or type"></label>
-        <label class="wide">Additional procedures <input name="additional" placeholder="e.g. + STSG donor thigh; + NPWT"></label>
-        <label>Approach* <select name="approach" required></select></label>
-        <label>Complexity <select name="complexity"></select></label>
-        <label>Laterality <select name="laterality"><option></option><option>Left</option><option>Right</option><option>Bilateral</option><option>Midline / N/A</option></select></label>
-        <label>Anaesthesia <select name="anaesthesia"></select></label>
-        <label>Duration (min) <input name="durationMin" type="number" min="0" step="5"></label>
-        <label>TBSA % (burns) <input name="tbsa" type="number" min="0" max="100" step="0.5"></label>
-      </fieldset>
-      <fieldset><legend>Your role</legend>
-        <label class="wide">Role* <select name="role" required></select></label>
-        <label class="wide">Supervisor / trainee / team <input name="supervisorTrainee" placeholder="e.g. Dr A (trainee, scrubbed)"></label>
-      </fieldset>
-      <fieldset><legend>Outcome</legend>
-        <label class="wide">Complication <select name="complication"></select></label>
-        <label class="wide">Outcome / follow-up <input name="outcome" placeholder="e.g. 100% graft take at day 7"></label>
-        <label class="wide">Tags <input name="tags" placeholder="comma-separated: teaching, outreach, research-cohort-A"></label>
-        <label class="full">Notes / reflection <textarea name="notes" rows="3"></textarea></label>
-      </fieldset>
+      <details class="more"><summary>More details (optional)</summary>
+        <fieldset>
+          <label class="wide">Complication grade (Clavien–Dindo) <select name="complication"></select></label>
+          <label class="wide">Facility <input name="facility" list="dlFacility"></label>
+          <label>Setting <select name="setting"></select></label>
+          <label>HRN / MRN <input name="mrn"></label>
+          <label>Case ref <input name="patientRef" placeholder="e.g. SR-6700"></label>
+          <label>ICD-10 <input name="icd10"></label>
+          <label>Approach <select name="approach"></select></label>
+          <label>Laterality <select name="laterality"><option></option><option>Left</option><option>Right</option><option>Bilateral</option><option>Midline / N/A</option></select></label>
+          <label>Duration (min) <input name="durationMin" type="number" min="0" step="5"></label>
+          <label>TBSA % (burns) <input name="tbsa" type="number" min="0" max="100" step="0.5"></label>
+          <label class="wide">Additional procedures <input name="additional"></label>
+          <label class="wide">Supervisor / trainee / team <input name="supervisorTrainee"></label>
+          <label class="wide">Tags <input name="tags" placeholder="comma-separated"></label>
+          <label class="full">Notes / reflection <textarea name="notes" rows="3"></textarea></label>
+        </fieldset>
+      </details>
       <div class="actions">
         <button type="submit" class="primary" id="saveBtn">Save entry</button>
         <button type="button" id="saveAnother">Save &amp; add similar</button>
@@ -128,11 +126,24 @@
         <button id="exportFilteredCsv">Export these (CSV)</button>
       </div>
       <div class="scroll"><table class="tbl" id="recTable">
-        <thead><tr><th data-sort="date">Date</th><th data-sort="patientName">Patient</th><th data-sort="domain">Domain</th><th data-sort="procedure">Procedure</th><th data-sort="role">Role</th><th data-sort="approach">Approach</th><th data-sort="complexity">Cx</th><th data-sort="facility">Facility</th><th data-sort="complication">Compl.</th><th></th></tr></thead>
+        <thead><tr><th data-sort="date">Date</th><th data-sort="patientName">Name / NRIC</th><th data-sort="procedure">Procedure / diagnosis</th><th data-sort="domain">Domain</th><th data-sort="complexity">Complexity</th><th data-sort="role">Role</th><th data-sort="urgency">Urgency</th><th>Remark</th><th></th></tr></thead>
         <tbody></tbody>
       </table></div>
       <div class="row"><button id="prevPage" class="ghost">‹ Prev</button><span id="pageInfo" class="muted"></span><button id="nextPage" class="ghost">Next ›</button></div>
     </div>
+  </section>
+
+  <!-- YEARLY REPORT -->
+  <section id="tab-yearly" class="tab">
+    <div class="card noprint">
+      <div class="row">
+        <label>Registry year <select id="yrSelect"></select></label>
+        <button id="yrPrint" class="primary">Print / save as PDF (A4)</button>
+        <button id="yrCsv">Download register (CSV / Excel)</button>
+        <span class="muted small">Prints A4 landscape: the case register splits across pages with column headings repeated, followed by the annual summary &amp; analysis.</span>
+      </div>
+    </div>
+    <div id="yrReport" class="yr-report print-area"></div>
   </section>
 
   <!-- PRIVILEGING -->
@@ -171,6 +182,7 @@
           <label>MMC / NSR no. <input name="regNo"></label>
           <label class="wide">Position / department <input name="position" placeholder="e.g. Consultant Plastic Surgeon"></label>
           <label class="wide">Default facility <input name="defaultFacility"></label>
+          <label class="full">Registry name matching — your name spellings, comma-separated <input name="nameVariants" placeholder="e.g. shakir, syakir, bathusha, batusha, badusha, bhatusha"></label>
           <div class="actions"><button class="primary" type="submit">Save profile</button><span class="msg" id="setMsg"></span></div>
         </form>
       </div>
@@ -182,6 +194,11 @@
         <p class="small">JSON backup from this app, or CSV using <a href="templates/import-template.csv" download>templates/import-template.csv</a>. Dates may be YYYY-MM-DD or DD/MM/YYYY. Entries with an existing id are updated, not duplicated.</p>
         <input type="file" id="importFile" accept=".json,.csv,text/csv,application/json">
         <pre id="importReport" class="small"></pre>
+      </div>
+      <div class="card"><h3>Import yearly hospital registry (.xlsx)</h3>
+        <p class="small">Choose the registry Excel export (e.g. <code>Year_2027.xlsx</code>). The file is read inside this browser only. Cases with your name in a doctor column are added with patient name, NRIC, HRN, diagnosis, registry wording, role and anaesthesia. Domain and procedure are suggested automatically and flagged for checking. Cases already in the log book are skipped, so corrections you made are kept.</p>
+        <input type="file" id="registryFile" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+        <pre id="registryReport" class="small"></pre>
       </div>
       <div class="card"><h3>Demo data</h3>
         <p class="small">Load 600 synthetic entries to explore the dashboards. They are tagged <code>demo</code> and can be removed in one click.</p>
@@ -205,6 +222,7 @@
 <script src="js/store.js"></script>
 <script src="js/charts.js"></script>
 <script src="js/demo.js"></script>
+<script src="js/registry.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

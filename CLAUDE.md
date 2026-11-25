@@ -11,7 +11,7 @@
 - Role mapping: Operating Doctor + "Surgeon" → P; Operating Doctor + "Supervisor" → ST; Involve_1 "Supervisor" → ST; Involve_1 "1st Assistant" → A. Where a co-surgeon is listed, log as P and flag it in notes for the owner to review.
 - Date = date of Time Started (fall back to Date Entry). `patientRef` = `SR-<SurgID>`. Record id = `reg<year>-<SurgID>`, so re-imports update records instead of duplicating them.
 - Blank morbidity → complication `UNK` (never `NONE`). "Type of Operation" is uninformative (all 1), so leave urgency blank.
-- Classify domain/procedure by hand from the operation text and keep the original wording in `additional` ("Registry: …").
+- Classify domain/procedure from the operation text and keep the original wording in the `registry` field. The app's built-in importer (`js/registry.js`, Data & settings → Import yearly hospital registry) applies these same rules.
 
 ## Dev
 - No build step. Tests: `node tests/analytics.test.js`.

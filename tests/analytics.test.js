@@ -5,6 +5,7 @@ var T = require('../js/taxonomy.js');
 var A = require('../js/analytics.js');
 var IO = require('../js/io.js');
 var D = require('../js/demo.js');
+var R = require('../js/registry.js');
 var fs = require('fs'), path = require('path');
 
 var passed = 0;
@@ -126,6 +127,69 @@ test('demo data is valid and deterministic', function () {
 });
 test('every taxonomy procedure has valid defaults', function () {
   T.DOMAINS.forEach(function (d) { d.procedures.forEach(function (p) { assert.ok(/^(INV|MIN|NON)$/.test(p[1]) && p[2] >= 1 && p[2] <= 4, p[0]); }); });
+});
+
+
+console.log('registry & yearly report');
+test('legacy "Registry:" in additional and outcome migrate to registry/remark', function () {
+  var x = IO.normalise({ date: '2026-01-02', procedure: 'Free ALT flap', role: 'P', additional: 'Registry: FREE ALT FLAP TO CHEEK', outcome: 'flap survived' });
+  assert.strictEqual(x.registry, 'FREE ALT FLAP TO CHEEK'); assert.strictEqual(x.additional, ''); assert.strictEqual(x.remark, 'flap survived');
+});
+test('core columns are the owner\'s 14 fields in order', function () {
+  assert.deepStrictEqual(IO.CORE.map(function (c) { return c[0]; }), ['date', 'patientName', 'patientId', 'age', 'sex', 'diagnosis', 'procedure', 'domain', 'registry', 'complexity', 'role', 'urgency', 'anaesthesia', 'remark']);
+  assert.deepStrictEqual(IO.FIELDS.slice(1, 15), IO.CORE.map(function (c) { return c[0]; }));
+});
+test('CSV import accepts report headings (e.g. "NRIC / ID")', function () {
+  var r = IO.fromCSV('Date,Name,NRIC / ID,Procedure,Domain,Role\n01/02/2026,A B,123,Carpal tunnel release,HAND,P\n');
+  assert.strictEqual(r.ok.length, 1); assert.strictEqual(r.ok[0].patientId, '123'); assert.strictEqual(r.ok[0].patientName, 'A B');
+});
+test('remarkText combines remark and complication grade', function () {
+  assert.strictEqual(A.remarkText({ remark: 'SSI', complication: 'CD-II' }), 'SSI; Clavien–Dindo II');
+  assert.strictEqual(A.remarkText({ remark: '', complication: 'UNK' }), '');
+});
+test('yearReport: only that year, months, roles, previous-year comparison', function () {
+  var list = [e({ date: '2026-01-05', role: 'P' }), e({ date: '2026-01-20', role: 'ST', urgency: 'Emergency' }), e({ date: '2026-03-02', role: 'A', complication: 'CD-IIIb' }), e({ date: '2025-07-01' })];
+  var r = A.yearReport(list, 2026, { coreFields: IO.CORE });
+  assert.strictEqual(r.entries.length, 3); assert.strictEqual(r.monthly[0].total, 2); assert.strictEqual(r.monthly[2].Assisted, 1);
+  assert.strictEqual(r.overview.performed, 1); assert.strictEqual(r.previous.total, 1); assert.strictEqual(r.complications.major, 1);
+  assert.strictEqual(r.domains.cols.length, 4);
+  var urg = r.completeness.filter(function (c) { return c.field === 'Urgency'; })[0]; assert.strictEqual(urg.filled, 1); assert.strictEqual(urg.missing, 2);
+  assert.ok(r.narrative.length >= 4);
+  assert.strictEqual(A.yearReport(list, 2030).entries.length, 0);
+});
+test('excelDate converts serial numbers and text', function () {
+  assert.strictEqual(R.excelDate(46057).date, '2026-02-04');
+  var t = R.excelDate(46057.7013888889); assert.strictEqual(t.minutes, 16 * 60 + 50);
+  assert.strictEqual(R.excelDate('2026-02-04 16:50:00').date, '2026-02-04');
+  assert.strictEqual(R.excelDate(''), null);
+});
+test('classifier maps common operations', function () {
+  function c(op, dx) { var x = R.classify(op, dx || ''); return x.domain + ' | ' + x.procedure; }
+  assert.strictEqual(c('WOUND DEBRIDEMENT+MEEK SKIN GRAFT', '20% TBSA BURN'), 'BURN-AC | Meshed / Meek micrografting');
+  assert.strictEqual(c('SOFT TISSUE RECONSTRUCTION WITH FREE ANTEROLATERAL THIGH FLAP'), 'MICRO | Free ALT flap');
+  assert.strictEqual(c('SOFT TISSUE COVERAGE WITH REVERSED ALT FLAP'), 'LOWLIMB | Pedicled reverse ALT flap');
+  assert.strictEqual(c('PALATOPLASTY + RIGHT BUCCAL FAT PAD', 'BCLP'), 'CRANIO | Cleft palate repair');
+  assert.strictEqual(c('WIDE LOCAL EXCISION + LOCAL FLAP', 'BASAL CELL CARCINOMA'), 'SKINONC | Excision skin lesion + local flap');
+  assert.strictEqual(c('SYNDCATYLY RELEASE AND FTSG', 'LEFT 4TH AND 5TH TOE SYNDACTYLY'), 'VASCANOM | Toe syndactyly release + full-thickness skin graft');
+  assert.strictEqual(c('WOUND DEBRIDEMENT + BURRING OF SKULL + BTM AND NPWT', 'DOG BITE LACERATION SCALP'), 'WOUND | Dermal matrix application');
+  assert.strictEqual(R.classify('SOMETHING UNUSUAL', '').domain, 'OTHER');
+});
+test('registryToEntries: name match in doctor columns only, role mapping, identifiers', function () {
+  var H = ['SurgID', 'Date Entry', 'Name of Patient', 'NRIC', 'Date Of Birth', 'Gender', 'HRN', 'Pre-operative Diagnosis', 'Time Started', 'Time Ended', 'Operation',
+    'Operating Doctor', 'Role Operating', 'Rank Operating', 'Doctor Involve_1', 'Role_1', 'Rank Doctor inv_1', 'General Anaesthesia', 'Location OT'];
+  var rows = [H,
+    [1, 46057, 'PATIENT ONE', '900101-01-1111', 32874, 'Male', 'H1', 'LEFT UCLP', 46057.375, 46057.5, 'LEFT LIP REPAIR', 'Dr Test Surgeon', 'Surgeon', 'Consultant', 'Dr Junior', '1st Assistant', 'Medical Officer', true, 'OT 10'],
+    [2, 46058, 'PATIENT TWO', '900101-01-2222', 32874, 'Female', '', 'BCC NOSE', 46058.4, 46058.45, 'WLE + FTSG', 'Dr Specialist', 'Surgeon', 'Specialist', 'Dr Test Surgeon', 'Supervisor', 'Consultant', true, 'Kulai OT'],
+    [3, 46058, 'TESTER PATIENT', '1', 32874, 'Male', '', 'X', 46058.4, 46058.45, 'WLE', 'Dr Other', 'Surgeon', 'Specialist', 'Dr Junior', '1st Assistant', 'MO', true, 'OT 1']];
+  var res = R.registryToEntries(rows, 'test surgeon');
+  assert.strictEqual(res.entries.length, 2, 'patient-name match must not count');
+  var a = res.entries[0], b = res.entries[1];
+  assert.strictEqual(a.id, 'reg2026-1'); assert.strictEqual(a.role, 'P'); assert.strictEqual(a.patientName, 'PATIENT ONE'); assert.strictEqual(a.patientId, '900101-01-1111');
+  assert.strictEqual(a.mrn, 'H1'); assert.strictEqual(a.durationMin, '180'); assert.strictEqual(a.anaesthesia, 'GA'); assert.strictEqual(a.registry, 'LEFT LIP REPAIR');
+  assert.strictEqual(a.domain, 'CRANIO'); assert.strictEqual(a.complication, 'UNK'); assert.strictEqual(a.urgency, ''); assert.strictEqual(a.age, '36');
+  assert.strictEqual(b.role, 'ST'); assert.strictEqual(b.facility, 'Hospital Kulai'); assert.strictEqual(b.sex, 'F');
+  res.entries.map(IO.normalise).forEach(function (x) { assert.deepStrictEqual(IO.validate(x), []); });
+  assert.throws(function () { R.registryToEntries(rows, ''); });
 });
 
 console.log('\n' + passed + ' passed' + (process.exitCode ? ', some FAILED' : ''));

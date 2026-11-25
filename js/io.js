@@ -8,12 +8,22 @@
   var SCHEMA_VERSION = 1;
 
   // Order here = CSV column order. See docs/DATA-DICTIONARY.md
-  var FIELDS = ['id', 'date', 'facility', 'setting', 'patientRef', 'patientName', 'patientId', 'mrn', 'age', 'sex', 'diagnosis', 'icd10',
-    'domain', 'procedure', 'additional', 'approach', 'complexity', 'role', 'supervisorTrainee',
-    'urgency', 'anaesthesia', 'laterality', 'durationMin', 'tbsa', 'complication', 'outcome',
-    'tags', 'notes', 'createdAt', 'updatedAt'];
+  // The first 14 (after id) are the owner's core register columns, in report order.
+  var FIELDS = ['id', 'date', 'patientName', 'patientId', 'age', 'sex', 'diagnosis', 'procedure', 'domain', 'registry',
+    'complexity', 'role', 'urgency', 'anaesthesia', 'remark',
+    'complication', 'facility', 'setting', 'mrn', 'patientRef', 'icd10', 'additional', 'approach', 'supervisorTrainee',
+    'laterality', 'durationMin', 'tbsa', 'tags', 'notes', 'createdAt', 'updatedAt'];
 
-  var REQUIRED = ['date', 'domain', 'procedure', 'role', 'approach'];
+  // Core register columns (report table order) with display headings
+  var CORE = [['date', 'Date'], ['patientName', 'Name'], ['patientId', 'NRIC / ID'], ['age', 'Age'], ['sex', 'Sex'],
+    ['diagnosis', 'Diagnosis'], ['procedure', 'Procedure'], ['domain', 'Domain'], ['registry', 'Registry'],
+    ['complexity', 'Complexity'], ['role', 'Role'], ['urgency', 'Urgency'], ['anaesthesia', 'Anaesthesia'],
+    ['remark', 'Remark (outcome / complication)']];
+
+  // Older column names still accepted on import
+  var LEGACY = { outcome: 'outcome' };
+
+  var REQUIRED = ['date', 'domain', 'procedure', 'role'];
 
   function uuid() {
     if (root.crypto && root.crypto.randomUUID) return root.crypto.randomUUID();
@@ -52,6 +62,9 @@
   function normalise(raw) {
     var e = {};
     FIELDS.forEach(function (f) { e[f] = clean(raw[f]); });
+    // Migrations from earlier versions
+    if (!e.registry && /^Registry:\s*/.test(e.additional)) { e.registry = e.additional.replace(/^Registry:\s*/, ''); e.additional = ''; }
+    if (!e.remark && clean(raw.outcome)) e.remark = clean(raw.outcome);
     e.date = parseDate(e.date) || e.date;
     e.role = String(codeFrom(T.ROLES, e.role)).toUpperCase();
     e.approach = String(codeFrom(T.APPROACHES, e.approach)).toUpperCase();
@@ -126,6 +139,8 @@
     var rows = parseCSV(text); if (!rows.length) return { ok: [], errors: [{ row: 0, messages: ['empty file'] }] };
     var header = rows[0].map(function (h) { return h.trim(); });
     var lowerMap = {}; FIELDS.forEach(function (f) { lowerMap[f.toLowerCase()] = f; });
+    Object.keys(LEGACY).forEach(function (k) { lowerMap[k] = LEGACY[k]; });
+    CORE.forEach(function (c) { lowerMap[c[1].toLowerCase()] = c[0]; });
     var idx = header.map(function (h) { return lowerMap[h.toLowerCase()] || null; });
     if (idx.indexOf('date') === -1 || idx.indexOf('procedure') === -1) return { ok: [], errors: [{ row: 1, messages: ['header must contain at least "date" and "procedure" columns — use templates/import-template.csv'] }] };
     var ok = [], errors = [];
@@ -153,7 +168,7 @@
     return { ok: ok, errors: errors, meta: data.meta || {} };
   }
 
-  var api = { SCHEMA_VERSION: SCHEMA_VERSION, FIELDS: FIELDS, REQUIRED: REQUIRED, uuid: uuid, parseDate: parseDate, validDate: validDate,
+  var api = { SCHEMA_VERSION: SCHEMA_VERSION, FIELDS: FIELDS, CORE: CORE, REQUIRED: REQUIRED, uuid: uuid, parseDate: parseDate, validDate: validDate,
     normalise: normalise, validate: validate, parseCSV: parseCSV, toCSV: toCSV, fromCSV: fromCSV, toJSON: toJSON, fromJSON: fromJSON };
   root.SLB = root.SLB || {};
   root.SLB.io = api;

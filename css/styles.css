@@ -94,7 +94,7 @@ footer { text-align: center; padding: 16px; }
 
 @media print {
   :root { --bg: #fff; --card: #fff; --fg: #000; --muted: #444; --line: #bbb; color-scheme: light; }
-  .topbar, .filters, .noprint, footer, .tab:not(#tab-privileging) { display: none !important; }
+  .topbar, .filters, .noprint, footer, .tab:not(.active) { display: none !important; }
   main { padding: 0; max-width: none; } .card { border: 0; padding: 0; }
   .signoff { display: block; margin-top: 28px; page-break-inside: avoid; }
   .sig { display: flex; justify-content: space-between; margin-top: 26px; }
@@ -103,3 +103,59 @@ footer { text-align: center; padding: 16px; }
 }
 .tbl.cases { font-size: 12px; }
 @media print { .case-h { page-break-before: always; } }
+
+/* ---------- entry form ---------- */
+.form fieldset.core { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+details.more { margin: 0 0 12px; }
+details.more summary { cursor: pointer; font-weight: 600; padding: 6px 0; color: var(--accent); }
+
+/* ---------- yearly report (screen) ---------- */
+.yr-report { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.rpt-head h1 { font-size: 20px; margin: 6px 0 8px; }
+.conf { font-size: 11px; font-weight: 700; color: var(--bad); letter-spacing: .02em; }
+.yr-report h2 { font-size: 16px; margin: 18px 0 6px; border-bottom: 2px solid var(--accent); padding-bottom: 3px; }
+.yr-report h3 { font-size: 14px; margin: 14px 0 6px; }
+table.register { border-collapse: collapse; width: 100%; min-width: 1100px; table-layout: fixed; font-size: 11.5px; }
+table.register th, table.register td { border: 1px solid var(--line); padding: 3px 4px; vertical-align: top; text-align: left; overflow-wrap: break-word; word-break: normal; hyphens: manual; }
+table.register th { background: var(--bg); font-size: 11px; }
+table.register tr.month-row td { background: rgba(var(--heat), .14); font-weight: 700; }
+.narr li { margin: 3px 0; }
+.grid-rpt { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 16px; align-items: start; }
+.grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; align-items: start; }
+.tbl.num td:not(:first-child), .tbl.num th:not(:first-child) { text-align: right; }
+.rpt-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.rpt-kpis .kv { font-size: 18px; }
+.yr-sign { display: block; margin-top: 24px; }
+.yr-sign .sig { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 22px; }
+@media (max-width: 700px) { .grid-rpt { grid-template-columns: 1fr; } .rpt-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---------- yearly report (print: A4 landscape, split across pages) ---------- */
+@page { size: A4; margin: 12mm; }
+@page yearly {
+  size: A4 landscape; margin: 10mm 9mm 13mm;
+  @bottom-left { content: "Surgical Log Book — CONFIDENTIAL: contains patient identifiers"; font: 7pt system-ui, sans-serif; color: #555; }
+  @bottom-right { content: "Page " counter(page) " of " counter(pages); font: 7pt system-ui, sans-serif; color: #555; }
+}
+@media print {
+  .yr-report { page: yearly; border: 0; padding: 0; font-size: 9pt; }
+  .yr-report .scroll { overflow: visible; }
+  .rpt-head h1 { font-size: 15pt; margin: 2mm 0; }
+  .yr-report h2 { font-size: 12pt; break-after: avoid; }
+  .yr-report h3 { font-size: 10pt; break-after: avoid; }
+  table.register { min-width: 0; font-size: 7pt; }
+  table.register th, table.register td { border-color: #999; padding: 1.2mm 1mm; }
+  table.register thead { display: table-header-group; }
+  table.register tr { break-inside: avoid; page-break-inside: avoid; }
+  table.register tr.month-row { break-after: avoid; page-break-after: avoid; }
+  table.register tr.month-row td { background: #e3eff0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .summary { break-before: page; page-break-before: always; }
+  .rpt-block, .narr, .rpt-kpis, .yr-sign { break-inside: avoid; page-break-inside: avoid; }
+  .yr-report .tbl { font-size: 8pt; }
+  .yr-report .tbl th, .yr-report .tbl td { padding: 0.8mm 1.5mm; }
+  .kpi { border-color: #bbb; }
+  .conf { color: #000; }
+}
+.yr-report .tbl.narrow { width: auto; min-width: min(100%, 520px); }
+@media print { table.register th { font-size: 6.6pt; } }
+table.register td:nth-child(2) { white-space: nowrap; }
+@media print { table.register td:nth-child(2), table.register td:nth-child(11) { white-space: nowrap; font-size: 6.8pt; } }

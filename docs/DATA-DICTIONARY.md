@@ -2,6 +2,8 @@
 
 One row = one procedure episode in which you took part. CSV import and export use these column names, in this order. **Bold** fields are required.
 
+The first 14 columns are the **core register**, shown in this order on the entry form and in the yearly report: Date, Name, NRIC/ID, Age, Sex, Diagnosis, Procedure, Domain, Registry, Complexity, Role, Urgency, Anaesthesia, Remark. Every other field is optional and sits under "More details".
+
 | Field | Type / allowed values | Notes |
 |---|---|---|
 | id | text | Created automatically. If an import row has an id that already exists, that record is updated. |
@@ -18,8 +20,10 @@ One row = one procedure episode in which you took part. CSV import and export us
 | icd10 | text | Optional ICD-10 diagnosis code. |
 | **domain** | code (see below) | Filled in automatically if the procedure is in the built-in list. |
 | **procedure** | text | Pick from the list or type your own. Use consistent wording so counts group correctly. |
+| registry | text | The operation exactly as written in the hospital registry. It is filled in automatically by the registry import. |
+| remark | text | Outcome and/or complication in your own words. The yearly report's Remark column also shows the Clavien–Dindo grade, if one is set. |
 | additional | text | Secondary procedures in the same sitting. They are not counted separately. Log a second entry if you need them counted. |
-| **approach** | `INV` invasive (open) · `MIN` minimally invasive · `NON` non-invasive | Built-in defaults can be overridden. |
+| approach | `INV` invasive (open) · `MIN` minimally invasive · `NON` non-invasive | Built-in defaults can be overridden. |
 | complexity | 1 Minor · 2 Intermediate · 3 Major · 4 Complex major | A local, pragmatic grading. It is **not** a national tariff or coding scheme. Defaults are suggestions. |
 | **role** | `P` · `PS` · `ST` · `SU` · `A` · `O` | See roles below. |
 | supervisorTrainee | text | Name of the supervisor (for PS) or the trainee (for ST/SU). |
@@ -29,7 +33,6 @@ One row = one procedure episode in which you took part. CSV import and export us
 | durationMin | number | Knife-to-skin to closure, or procedure time. |
 | tbsa | 0–100 | % total body surface area, for burns. |
 | complication | `NONE` · `CD-I` · `CD-II` · `CD-IIIa` · `CD-IIIb` · `CD-IVa` · `CD-IVb` · `CD-V` · `UNK` | Clavien–Dindo grade (Dindo D, Demartines N, Clavien PA. *Ann Surg* 2004;240:205–213). `UNK` = not yet followed up. It is left out of rate denominators. |
-| outcome | text | For example graft take, flap survival or healing time. |
 | tags | comma-separated text | Free labels such as teaching, outreach or audit cohort. `demo` marks synthetic entries. |
 | notes | text | Reflection or learning points. |
 | createdAt / updatedAt | ISO timestamp | Set automatically. |

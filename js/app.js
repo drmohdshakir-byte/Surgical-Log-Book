@@ -26,7 +26,7 @@
     f.complexity.innerHTML = opt('', '—') + T.COMPLEXITY.map(function (c) { return opt(c.code, c.code + ' — ' + c.label); }).join('');
     f.role.innerHTML = opt('', '— select role —') + T.ROLES.map(function (r) { return opt(r.code, r.code + ' — ' + r.label); }).join('');
     f.setting.innerHTML = opt('', '—') + T.SETTINGS.map(function (s) { return opt(s, s); }).join('');
-    f.urgency.innerHTML = T.URGENCY.map(function (s) { return opt(s, s); }).join('');
+    f.urgency.innerHTML = opt('', '— select —') + T.URGENCY.map(function (s) { return opt(s, s); }).join('');
     f.anaesthesia.innerHTML = opt('', '—') + T.ANAESTHESIA.map(function (s) { return opt(s, s); }).join('');
     f.complication.innerHTML = T.COMPLICATIONS.map(function (c) { return opt(c.code, c.label); }).join('');
 
@@ -70,7 +70,7 @@
     state.tab = name;
     $$('.tabs button').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === name); });
     $$('.tab').forEach(function (t) { t.classList.toggle('active', t.id === 'tab-' + name); });
-    $('#filters').style.display = (name === 'entry' || name === 'data') ? 'none' : '';
+    $('#filters').style.display = (name === 'entry' || name === 'data' || name === 'yearly') ? 'none' : '';
     render();
   }
 
@@ -80,6 +80,7 @@
     else if (state.tab === 'privileging') renderPrivileging();
     else if (state.tab === 'cv') renderCv();
     else if (state.tab === 'data') renderData();
+    else if (state.tab === 'yearly') renderYearly();
   }
 
   // ---------- dashboard ----------
@@ -184,10 +185,11 @@
     $('#recCount').textContent = list.length + ' of ' + S.all().length + ' records';
     $('#pageInfo').textContent = 'Page ' + (state.page + 1) + ' / ' + pages;
     $('#recTable tbody').innerHTML = slice.map(function (e) {
-      return '<tr><td>' + esc(e.date) + '</td><td>' + esc(e.patientName || e.patientRef || '') + (e.mrn ? ' <span class="muted small">' + esc(e.mrn) + '</span>' : '') + '</td><td>' + esc(T.domainName(e.domain)) + '</td><td title="' + esc(e.diagnosis || '') + '">' + esc(e.procedure) + (e.additional ? ' <span class="muted small">' + esc(e.additional) + '</span>' : '') +
-        '</td><td title="' + esc(T.roleLabel(e.role)) + '">' + esc(e.role) + '</td><td>' + esc(e.approach) + '</td><td>' + esc(e.complexity) + '</td><td>' + esc(e.facility) + '</td><td>' + esc(e.complication === 'NONE' ? '–' : e.complication) +
+      return '<tr><td class="nowrap">' + esc(e.date) + '</td><td>' + esc(e.patientName || e.patientRef || '') + (e.patientId ? '<br><span class="muted small">' + esc(e.patientId) + '</span>' : '') +
+        '</td><td title="' + esc(e.registry || '') + '">' + esc(e.procedure) + (e.diagnosis ? '<br><span class="muted small">' + esc(e.diagnosis) + '</span>' : '') + '</td><td>' + esc(T.domainName(e.domain)) +
+        '</td><td>' + esc(T.complexityLabel(e.complexity)) + '</td><td title="' + esc(T.roleLabel(e.role)) + '">' + esc(e.role) + '</td><td>' + esc(e.urgency) + '</td><td>' + esc(A.remarkText(e)) +
         '</td><td class="nowrap"><button class="ghost sm" data-edit="' + esc(e.id) + '">Edit</button><button class="ghost sm" data-del="' + esc(e.id) + '">Delete</button></td></tr>';
-    }).join('') || '<tr><td colspan="10" class="empty">No records match.</td></tr>';
+    }).join('') || '<tr><td colspan="9" class="empty">No records match.</td></tr>';
     $$('#recTable th').forEach(function (th) { th.classList.toggle('sorted', th.dataset.sort === k); th.dataset.dir = th.dataset.sort === k ? (d > 0 ? '▲' : '▼') : ''; });
     state.lastRecordList = list;
   }
@@ -241,7 +243,7 @@
   // ---------- data ----------
   function renderData() {
     var s = state.settings, f = $('#settingsForm');
-    ['name', 'regNo', 'position', 'defaultFacility'].forEach(function (k) { f[k].value = s[k] || ''; });
+    ['name', 'regNo', 'position', 'defaultFacility', 'nameVariants'].forEach(function (k) { f[k].value = s[k] || ''; });
     $('#backend').textContent = S.backend() + ', ' + S.all().length + ' records';
     $('#lastBackup').innerHTML = s.lastBackup ? 'Last JSON backup: <b>' + esc(s.lastBackup.slice(0, 16).replace('T', ' ')) + '</b>' : '<span class="bad">No backup exported from this browser yet.</span>';
   }
@@ -265,6 +267,122 @@
   }
 
   function afterDataChange() { refreshFacilities(); procedureList($('#entryForm').domain.value); render(); }
+
+
+  // ---------- yearly report ----------
+  function csvLine(arr) { return arr.map(function (c) { c = String(c == null ? '' : c); if (/^[=+\-@]/.test(c) && !/^-?\d/.test(c)) c = "'" + c; return /[",\n\r]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c; }).join(','); }
+  function coreCell(e, f) {
+    if (f === 'domain') return T.domainName(e.domain);
+    if (f === 'complexity') return T.complexityLabel(e.complexity);
+    if (f === 'sex') return e.sex === 'M' ? 'M' : e.sex === 'F' ? 'F' : '';
+    if (f === 'remark') return A.remarkText(e);
+    return e[f] == null ? '' : e[f];
+  }
+  function yearOptions() {
+    var ys = A.yearsIn(S.all()), cur = today().slice(0, 4);
+    if (ys.indexOf(cur) === -1) ys.push(cur);
+    ys.sort().reverse();
+    var sel = $('#yrSelect'), keep = state.year && ys.indexOf(state.year) !== -1 ? state.year : (A.yearsIn(S.all()).slice(-1)[0] || cur);
+    sel.innerHTML = ys.map(function (y) { return opt(y, 'Registry ' + y, y === keep); }).join('');
+    state.year = keep;
+  }
+  function tbl(head, rows, cls) {
+    return '<table class="tbl ' + (cls || '') + '"><thead><tr>' + head.map(function (h) { return '<th>' + esc(h) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      rows.map(function (r) { return '<tr>' + r.map(function (c) { return '<td>' + esc(c) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table>';
+  }
+  function renderYearly() {
+    yearOptions();
+    var s = state.settings, R = A.yearReport(S.all(), state.year, { coreFields: IO.CORE }), o = R.overview, n = o.total;
+    function pc(x) { return n ? (x / n * 100).toFixed(1) + '%' : '—'; }
+    var html = '<header class="rpt-head"><div class="conf">CONFIDENTIAL — contains patient identifiers. For healthcare governing bodies and credentialing authorities only.</div>' +
+      '<h1>Surgical Log Book — Registry ' + esc(R.year) + '</h1>' +
+      '<table class="meta"><tr><td>Name</td><td>' + esc(s.name || '—') + '</td><td>MMC / NSR no.</td><td>' + esc(s.regNo || '—') + '</td><td>Generated</td><td>' + esc(today()) + '</td></tr>' +
+      '<tr><td>Position</td><td>' + esc(s.position || '—') + '</td><td>Period</td><td>' + esc(R.year + '-01-01 to ' + R.year + '-12-31') + '</td><td>Cases</td><td><b>' + n + '</b></td></tr></table></header>';
+    if (!n) { $('#yrReport').innerHTML = html + '<p class="empty">No entries recorded for ' + esc(R.year) + ' yet. Add entries, or import the ' + esc(R.year) + ' hospital registry under Data &amp; settings.</p>'; return; }
+
+    // Part A — register
+    html += '<h2>Part A — Case register ' + esc(R.year) + '</h2><p class="small muted">Role: P = performed independently · PS = performed under supervision · ST = supervised trainee (scrubbed) · SU = supervised trainee (unscrubbed) · A = assisted · O = observed.</p>' +
+      '<div class="scroll"><table class="register"><colgroup><col style="width:3%">' +
+      ['6.5', '9', '8', '3.5', '3', '9.5', '9.5', '7.5', '11', '6.5', '3.5', '5.5', '6.5', '7.5'].map(function (w) { return '<col style="width:' + w + '%">'; }).join('') +
+      '</colgroup><thead><tr><th>#</th>' + IO.CORE.map(function (c) { return '<th>' + esc(c[1]) + '</th>'; }).join('') + '</tr></thead><tbody>';
+    var curMonth = '', i = 0;
+    R.entries.forEach(function (e) {
+      var m = e.date.slice(5, 7);
+      if (m !== curMonth) {
+        curMonth = m; var mc = R.monthly[Number(m) - 1].total;
+        html += '<tr class="month-row"><td colspan="15">' + A.MONTHS[Number(m) - 1] + ' ' + esc(R.year) + ' — ' + mc + ' case' + (mc === 1 ? '' : 's') + '</td></tr>';
+      }
+      i++;
+      html += '<tr><td>' + i + '</td>' + IO.CORE.map(function (c) { return '<td>' + esc(coreCell(e, c[0])) + '</td>'; }).join('') + '</tr>';
+    });
+    html += '</tbody></table></div>';
+
+    // Part B — summary & analysis
+    html += '<section class="summary"><h2>Part B — Annual summary &amp; analysis ' + esc(R.year) + '</h2>' +
+      '<div class="kpis rpt-kpis">' + [['Total cases', n], ['Performed (P+PS)', o.performed + ' · ' + pc(o.performed)], ['Supervised trainee', o.supervised + ' · ' + pc(o.supervised)], ['Assisted', o.assisted + ' · ' + pc(o.assisted)],
+        ['Major / complex', o.majorPlus + ' · ' + pc(o.majorPlus)], ['Domains covered', o.domains + ' / ' + T.DOMAINS.length], ['Median age', R.ageMedian == null ? '—' : R.ageMedian + ' y'], ['Median duration', o.medianDuration == null ? '—' : o.medianDuration + ' min']]
+        .map(function (k) { return '<div class="kpi"><div class="kv">' + esc(k[1]) + '</div><div class="kl">' + esc(k[0]) + '</div></div>'; }).join('') + '</div>' +
+      '<h3>B1. Analysis</h3><ul class="narr">' + R.narrative.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>' +
+      '<div class="rpt-block"><h3>B2. Monthly activity</h3><div class="grid-rpt"><div>' +
+      tbl(['Month', 'Performed', 'Supervised', 'Assisted', 'Observed', 'Total'], R.monthly.map(function (m) { return [m.month, m.Performed, m.Supervised, m.Assisted, m.Observed, m.total]; }).concat([['Total', o.performed, o.supervised, o.assisted, o.observed, n]]), 'num') +
+      '</div><div id="yrChart"></div></div></div>' +
+      '<div class="rpt-block"><h3>B3. Case mix by domain and role</h3>' +
+      tbl(['Domain', 'Performed', 'Supervised', 'Assisted', 'Observed', 'Total', '% of year'], R.domains.rows.map(function (r) { return [r.key].concat(r.cells, [r.total, pc(r.total)]); })
+        .concat([['Total'].concat(R.domains.colTotals, [n, '100%'])]), 'num') + '</div>' +
+      '<div class="rpt-block"><h3>B4. Complexity, urgency, anaesthesia and patients</h3><div class="grid3">' +
+      tbl(['Complexity', 'n', '%'], R.complexity.map(function (x) { return [x.key, x.count, pc(x.count)]; }), 'num') +
+      tbl(['Urgency', 'n', '%'], R.urgency.map(function (x) { return [x.key, x.count, pc(x.count)]; }), 'num') +
+      tbl(['Anaesthesia', 'n', '%'], R.anaesthesia.map(function (x) { return [x.key, x.count, pc(x.count)]; }), 'num') +
+      tbl(['Sex', 'n', '%'], R.sex.map(function (x) { return [x.key, x.count, pc(x.count)]; }), 'num') +
+      tbl(['Age band (years)', 'n', '%'], R.ageBands.map(function (x) { return [x.key, x.count, pc(x.count)]; }), 'num') +
+      '</div></div>' +
+      '<div class="rpt-block"><h3>B5. Ten most frequent procedures</h3>' + tbl(['Procedure', 'n', '%'], R.top.map(function (x, j) { return [(j + 1) + '. ' + x.key, x.count, pc(x.count)]; }), 'num narrow') + '</div>' +
+      '<div class="rpt-block"><h3>B6. Outcomes and complications</h3>' +
+      tbl(['Measure', 'n'], [['Cases with a remark recorded', R.complications.withRemark], ['Complication grade recorded', R.complications.known], ['— no complication', R.complications.none],
+        ['— Clavien–Dindo I–II', R.complications.minor], ['— Clavien–Dindo III or higher', R.complications.major], ['Grade not recorded / unknown', R.complications.unknown]], 'num narrow') +
+      '<p class="small muted">Self-recorded complications under-count compared with prospective audit; rates are not suitable for benchmarking against published series.</p></div>' +
+      (R.previous ? '<div class="rpt-block"><h3>B7. Comparison with ' + esc(R.previous.year) + '</h3>' +
+        tbl(['Domain', R.previous.year, R.year, 'Change'], R.previous.domains.map(function (d) { return [d.key, d.prev, d.cur, (d.cur - d.prev >= 0 ? '+' : '') + (d.cur - d.prev)]; })
+          .concat([['Total', R.previous.total, n, (n - R.previous.total >= 0 ? '+' : '') + (n - R.previous.total)]]), 'num') + '</div>' : '') +
+      '<div class="rpt-block"><h3>B' + (R.previous ? 8 : 7) + '. Data completeness</h3>' +
+      tbl(['Field', 'Filled', 'Missing', '% complete'], R.completeness.map(function (c) { return [c.field, c.filled, c.missing, pc(c.filled)]; }), 'num narrow') + '</div>' +
+      '<div class="signoff yr-sign"><p>I declare that the above is a true record of my surgical and procedural activity for ' + esc(R.year) + '.</p>' +
+      '<div class="sig"><span>Signature: ____________________</span><span>Date: ______________</span></div>' +
+      '<div class="sig"><span>Verified by (Head of Department): ____________________</span><span>Date: ______________</span></div></div></section>';
+    $('#yrReport').innerHTML = html;
+    C.timeSeries($('#yrChart'), R.monthly.reduce(function (acc, m, j) { var cum = (acc.length ? acc[acc.length - 1].cumulative : 0) + m.total; acc.push({ period: m.month, count: m.total, cumulative: cum }); return acc; }, []), { unit: 'month', aria: 'monthly activity' });
+    state.lastYear = R;
+  }
+  function yearlyCsv() {
+    var R = state.lastYear; if (!R) return '';
+    return '﻿' + [csvLine(['#'].concat(IO.CORE.map(function (c) { return c[1]; })))].concat(R.entries.map(function (e, i) { return csvLine([i + 1].concat(IO.CORE.map(function (c) { return coreCell(e, c[0]); }))); })).join('\r\n') + '\r\n';
+  }
+
+  // ---------- registry (.xlsx) import ----------
+  function doRegistryImport(file) {
+    var rep = $('#registryReport');
+    if (typeof DecompressionStream === 'undefined') { rep.textContent = 'This browser cannot read .xlsx files. Please use a current Chrome, Edge, Firefox or Safari.'; return; }
+    if (!state.settings.nameVariants) { rep.textContent = 'First enter your name spellings under Profile → "Registry name matching", then Save profile.'; return; }
+    rep.textContent = 'Reading ' + file.name + '…';
+    file.arrayBuffer().then(SLB.registry.readXlsx).then(function (rows) {
+      var res = SLB.registry.registryToEntries(rows, state.settings.nameVariants);
+      var all = res.entries.map(IO.normalise), bad = [], fresh = [], existing = 0;
+      all.forEach(function (e) { var errs = IO.validate(e); if (errs.length) bad.push(e.patientRef + ': ' + errs.join('; ')); else if (S.get(e.id)) existing++; else fresh.push(e); });
+      var unclass = fresh.filter(function (e) { return e.domain === 'OTHER'; }).length, coSurg = fresh.filter(function (e) { return /review|change to ST/.test(e.notes); }).length;
+      var lines = [(rows.length - 1) + ' registry rows read; ' + all.length + ' involve you (' + Object.keys(res.years).map(function (y) { return y + ': ' + res.years[y]; }).join(', ') + ').',
+        fresh.length + ' new · ' + existing + ' already in log book (skipped, your edits kept) · ' + bad.length + ' rejected.',
+        'Of the new entries: ' + unclass + ' could not be classified (domain "Other"), ' + coSurg + ' need a role check (co-surgeon listed). All have domain/procedure flagged for checking in Notes.'];
+      bad.slice(0, 30).forEach(function (b) { lines.push('  rejected ' + b); });
+      rep.textContent = lines.join('\n');
+      if (!fresh.length) return;
+      if (!confirm(lines[0] + '\n' + lines[1] + '\n\nAdd the ' + fresh.length + ' new entries now?')) { rep.textContent += '\nImport cancelled.'; return; }
+      return S.putMany(fresh).then(function () {
+        rep.textContent += '\nImported. Open Records and search "please check" to review.';
+        var ys = Object.keys(res.years).sort(); if (ys.length) state.year = ys[ys.length - 1];
+        afterDataChange();
+      });
+    }).catch(function (err) { rep.textContent = 'Could not import: ' + err.message; });
+  }
 
   // ---------- events ----------
   function bind() {
@@ -297,6 +415,10 @@
     $('#exportFilteredCsv').addEventListener('click', function () { download('logbook-filtered-' + today() + '.csv', IO.toCSV(state.lastRecordList || []), 'text/csv'); });
 
     $('#printPriv').addEventListener('click', function () { window.print(); });
+    $('#yrSelect').addEventListener('change', function () { state.year = this.value; renderYearly(); });
+    $('#yrPrint').addEventListener('click', function () { window.print(); });
+    $('#yrCsv').addEventListener('click', function () { if (state.lastYear) download('registry-' + state.year + '-register-CONFIDENTIAL.csv', yearlyCsv(), 'text/csv'); });
+    $('#registryFile').addEventListener('change', function () { if (this.files[0]) doRegistryImport(this.files[0]); this.value = ''; });
     $('#csvPriv').addEventListener('click', function () { download('privileging-summary-' + today() + '.csv', privCsv(), 'text/csv'); });
     $('#privShowAll').addEventListener('change', renderPrivileging);
     $('#privCases').addEventListener('change', renderPrivileging);
@@ -308,7 +430,7 @@
 
     $('#settingsForm').addEventListener('submit', function (ev) {
       ev.preventDefault(); var sf = ev.target;
-      ['name', 'regNo', 'position', 'defaultFacility'].forEach(function (k) { state.settings[k] = sf[k].value.trim(); });
+      ['name', 'regNo', 'position', 'defaultFacility', 'nameVariants'].forEach(function (k) { state.settings[k] = sf[k].value.trim(); });
       S.saveSettings(state.settings); updateOwner(); flash($('#setMsg'), 'Saved.');
     });
     $('#exportJson').addEventListener('click', function () {

@@ -4,6 +4,11 @@ A personal, offline logbook for **Plastic, Reconstructive & Burns Surgery and Wo
 
 - **Dashboard:** totals, role split, activity over time (monthly/yearly with a cumulative curve), case mix by domain and role, approach and complexity, top procedures, a domain × year heat-map, 12-month domain trends, and Clavien–Dindo complication rates with 95% confidence intervals.
 - **Privileging report:** counts per domain and procedure, split by role (P / PS / ST / SU / A / O), with the last date each procedure was done, for any period or facility. An optional appendix lists every case with patient name, NRIC and HRN for verification. Prints to PDF with a declaration and HOD sign-off block, or downloads as CSV.
+- **Yearly report (2026, 2027, …):** an A4 landscape report for each registry year.
+  - Part A is the case register with 14 columns: Date, Name, NRIC/ID, Age, Sex, Diagnosis, Procedure, Domain, Registry, Complexity, Role, Urgency, Anaesthesia and Remark. It is split across pages with the column headings repeated, never splits a row, and numbers every page.
+  - Part B is the annual summary and analysis: key figures, factual analysis, monthly activity, case mix by domain and role, complexity, urgency, anaesthesia, patient demographics, top procedures, outcomes, comparison with the previous year, and data completeness. A declaration and HOD sign-off close the report.
+  - Print it to PDF, or download the register as CSV for Excel.
+- **Yearly hospital registry import:** load the hospital registry Excel export (`.xlsx`) directly. Cases with your name in a doctor column are added automatically, with domain and procedure suggested and flagged for checking. Cases already in the log book are skipped, so your corrections are kept.
 - **CV / portfolio summary:** plain-text operative experience statement you can paste into a CV or appraisal.
 - **Records:** search, sort, edit and delete. Export any filtered view to CSV.
 - **Import / export:** full JSON backup, CSV/Excel export, and bulk CSV import from existing spreadsheets.
@@ -21,7 +26,8 @@ First steps:
 2. Optional: **Load demo data** to explore the dashboards, then **Remove demo entries**.
 3. To migrate an existing logbook, copy your spreadsheet into the columns of [`templates/import-template.csv`](templates/import-template.csv) (delete the example rows) and import it. Each rejected row is listed with the reason.
 4. Log new cases under **+ New entry**. **Save & add similar** keeps the date, facility, domain and role for a quick run of cases from the same list.
-5. Export a **JSON backup** regularly, for example monthly.
+5. Each year, enter your name spellings once under **Data & settings → Registry name matching**. Then use **Import yearly hospital registry (.xlsx)** with the new year's file, review the flagged entries in **Records**, and print the year from **Yearly report**.
+6. Export a **JSON backup** regularly, for example monthly.
 
 ## Data model
 See [docs/DATA-DICTIONARY.md](docs/DATA-DICTIONARY.md) for the fields, role definitions, domains and how each statistic is calculated. To extend the procedure list, edit [`js/taxonomy.js`](js/taxonomy.js).
@@ -36,6 +42,7 @@ js/analytics.js       filtering, series, cross-tabs, trends, Wilson CI, summarie
 js/charts.js          dependency-free SVG charts
 js/store.js           IndexedDB persistence (localStorage fallback)
 js/demo.js            synthetic demo data generator
+js/registry.js        yearly hospital registry (.xlsx) reader, role mapping and auto-classification
 js/app.js             UI
 tests/                node tests/analytics.test.js
 templates/            CSV import template

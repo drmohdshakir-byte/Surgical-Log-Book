@@ -235,11 +235,122 @@
     return lines.join('\n');
   }
 
+
+  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  var ROLE_GROUPS = ['Performed', 'Supervised', 'Assisted', 'Observed'];
+
+  // Text shown in the "Remark (outcome / complication)" column
+  function remarkText(e) {
+    var parts = [];
+    if (e.remark) parts.push(e.remark);
+    if (e.complication && e.complication !== 'UNK' && e.complication !== 'NONE') {
+      var lbl = e.complication.replace('CD-', 'Clavien–Dindo ');
+      if (!e.remark || e.remark.indexOf(lbl) === -1) parts.push(lbl);
+    }
+    return parts.join('; ');
+  }
+
+  function yearsIn(entries) {
+    var y = {}; entries.forEach(function (e) { if (e.date) y[e.date.slice(0, 4)] = 1; });
+    return Object.keys(y).sort();
+  }
+
+  function pctStr(n, d) { return d ? (n / d * 100).toFixed(1) + '%' : '—'; }
+
+  /*
+   * Everything the yearly report needs, from the full entry list and a year ('2026').
+   * Narrative sentences state counts only; no causal claims.
+   */
+  function yearReport(all, year, opts) {
+    opts = opts || {};
+    year = String(year);
+    var list = all.filter(function (e) { return e.date && e.date.slice(0, 4) === year; })
+      .sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : (a.createdAt < b.createdAt ? -1 : 1); });
+    var prevList = all.filter(function (e) { return e.date && e.date.slice(0, 4) === String(Number(year) - 1); });
+    var o = overview(list), n = list.length;
+
+    var monthly = MONTHS.map(function (m, i) {
+      var mm = year + '-' + pad2(i + 1), row = { month: m, total: 0 };
+      ROLE_GROUPS.forEach(function (g) { row[g] = 0; });
+      list.forEach(function (e) { if (e.date.slice(0, 7) === mm) { row.total++; row[T.roleGroup(e.role)] = (row[T.roleGroup(e.role)] || 0) + 1; } });
+      return row;
+    });
+
+    var domains = crossTab(list, function (e) { return T.domainName(e.domain); }, function (e) { return T.roleGroup(e.role); }, ROLE_GROUPS);
+    // keep all four role columns even when a group is absent
+    domains.cols.length !== ROLE_GROUPS.length && (function () {
+      var rows = domains.rows.map(function (r) {
+        var cells = ROLE_GROUPS.map(function (g) { var i = domains.cols.indexOf(g); return i === -1 ? 0 : r.cells[i]; });
+        return { key: r.key, cells: cells, total: r.total };
+      });
+      domains = { cols: ROLE_GROUPS.slice(), rows: rows, colTotals: ROLE_GROUPS.map(function (_, i) { return rows.reduce(function (s, r) { return s + r.cells[i]; }, 0); }), grand: n };
+    })();
+
+    var complexity = T.COMPLEXITY.map(function (c) { return { key: c.label, count: list.filter(function (e) { return Number(e.complexity) === c.code; }).length }; });
+    var cxBlank = list.filter(function (e) { return !e.complexity; }).length;
+    if (cxBlank) complexity.push({ key: 'Not graded', count: cxBlank });
+
+    var urgency = countBy(list, function (e) { return e.urgency || 'Not recorded'; });
+    var anaesthesia = countBy(list, function (e) { return e.anaesthesia || 'Not recorded'; });
+    var sex = countBy(list, function (e) { return e.sex === 'M' ? 'Male' : e.sex === 'F' ? 'Female' : 'Not recorded'; });
+    var ages = list.map(function (e) { return e.age === '' ? NaN : Number(e.age); }).filter(function (a) { return !isNaN(a); }).sort(function (a, b) { return a - b; });
+    var ageBands = [['< 1', 0, 0], ['1–12', 1, 12], ['13–17', 13, 17], ['18–39', 18, 39], ['40–59', 40, 59], ['60+', 60, 200]].map(function (b) {
+      return { key: b[0], count: ages.filter(function (a) { return a >= b[1] && a <= b[2]; }).length };
+    });
+    var top = countBy(list, function (e) { return e.procedure; }).slice(0, 10);
+
+    var comp = { known: 0, none: 0, minor: 0, major: 0, unknown: 0, withRemark: 0 };
+    list.forEach(function (e) {
+      if (e.remark) comp.withRemark++;
+      if (!e.complication || e.complication === 'UNK') comp.unknown++;
+      else { comp.known++; if (e.complication === 'NONE') comp.none++; else if (MAJOR_COMPLICATION[e.complication]) comp.major++; else comp.minor++; }
+    });
+    comp.majorRate = wilson(comp.major, comp.known);
+
+    var completeness = (opts.coreFields || []).map(function (f) {
+      var filled = list.filter(function (e) { return String(e[f[0]] || '').trim() !== ''; }).length;
+      return { field: f[1], filled: filled, missing: n - filled };
+    });
+
+    var prev = null;
+    if (prevList.length) {
+      var pd = {}; prevList.forEach(function (e) { var k = T.domainName(e.domain); pd[k] = (pd[k] || 0) + 1; });
+      var cd = {}; list.forEach(function (e) { var k = T.domainName(e.domain); cd[k] = (cd[k] || 0) + 1; });
+      var keys = Object.keys(pd).concat(Object.keys(cd).filter(function (k) { return !pd[k]; }));
+      prev = { year: String(Number(year) - 1), total: prevList.length,
+        domains: keys.map(function (k) { return { key: k, prev: pd[k] || 0, cur: cd[k] || 0 }; }).sort(function (a, b) { return b.cur - a.cur || b.prev - a.prev; }) };
+    }
+
+    // Factual narrative
+    var text = [];
+    if (n) {
+      var active = monthly.filter(function (m) { return m.total; });
+      var busiest = monthly.slice().sort(function (a, b) { return b.total - a.total; })[0];
+      text.push(n + ' procedures were logged in ' + year + ' (' + o.first + ' to ' + o.last + '), across ' + o.domains + ' of ' + T.DOMAINS.length + ' domains and ' + active.length + ' active months.');
+      text.push('Role: performed ' + o.performed + ' (' + pctStr(o.performed, n) + '), supervised trainee ' + o.supervised + ' (' + pctStr(o.supervised, n) + '), assisted ' + o.assisted + ' (' + pctStr(o.assisted, n) + ')' + (o.observed ? ', observed ' + o.observed : '') + '.');
+      if (domains.rows.length) {
+        var d1 = domains.rows[0];
+        text.push('Largest domain: ' + d1.key + ' with ' + d1.total + ' cases (' + pctStr(d1.total, n) + ')' + (domains.rows[1] ? ', followed by ' + domains.rows[1].key + ' (' + domains.rows[1].total + ')' : '') + '.');
+      }
+      text.push('Busiest month: ' + busiest.month + ' ' + year + ' (' + busiest.total + ' cases); mean ' + (n / Math.max(1, active.length)).toFixed(1) + ' cases per active month.');
+      text.push('Major or complex-major cases: ' + o.majorPlus + ' (' + pctStr(o.majorPlus, n) + ').' + (ages.length ? ' Patient age ' + ages[0] + '–' + ages[ages.length - 1] + ' years (median ' + median(ages) + ').' : ''));
+      if (comp.known) text.push('Complication grade recorded for ' + comp.known + ' of ' + n + ' cases; Clavien–Dindo III or higher in ' + comp.major + ' (' + pctStr(comp.major, comp.known) + ', 95% CI ' + (comp.majorRate.lo * 100).toFixed(1) + '–' + (comp.majorRate.hi * 100).toFixed(1) + '%).');
+      else text.push('No complication grades are recorded for this year, so no complication rate can be stated.');
+      var urgNR = list.filter(function (e) { return !e.urgency; }).length;
+      if (urgNR) text.push('Urgency is not recorded for ' + urgNR + ' cases; elective/emergency figures are incomplete.');
+      if (prev) text.push('Compared with ' + prev.year + ' (' + prev.total + ' cases): ' + (n - prev.total >= 0 ? '+' : '') + (n - prev.total) + ' cases (' + (prev.total ? ((n - prev.total) / prev.total * 100).toFixed(0) + '%' : '—') + ').');
+    }
+
+    return { year: year, entries: list, overview: o, monthly: monthly, domains: domains, complexity: complexity, urgency: urgency,
+      anaesthesia: anaesthesia, sex: sex, ageBands: ageBands, ageMedian: median(ages), top: top, complications: comp,
+      completeness: completeness, previous: prev, narrative: text };
+  }
+
   var api = {
     applyFilter: applyFilter, countBy: countBy, series: series, crossTab: crossTab, slope: slope, wilson: wilson,
     domainTrends: domainTrends, complicationSummary: complicationSummary, privilegingSummary: privilegingSummary,
     overview: overview, cvSummary: cvSummary, median: median, monthsBetween: monthsBetween, addMonths: addMonths,
-    shiftDate: shiftDate, isoDate: isoDate, PERFORMED: PERFORMED, SUPERVISED: SUPERVISED, MAJOR_COMPLICATION: MAJOR_COMPLICATION
+    shiftDate: shiftDate, isoDate: isoDate, remarkText: remarkText, yearsIn: yearsIn, yearReport: yearReport, MONTHS: MONTHS, PERFORMED: PERFORMED, SUPERVISED: SUPERVISED, MAJOR_COMPLICATION: MAJOR_COMPLICATION
   };
   root.SLB = root.SLB || {};
   root.SLB.analytics = api;
