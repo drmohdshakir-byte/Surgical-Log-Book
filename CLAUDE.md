@@ -2,7 +2,6 @@
 
 ## Patient identifiers: owner's standing instruction (2026-11-22)
 - The owner (consultant plastic surgeon) **authorises recording patient name, NRIC/passport (`patientId`) and HRN/MRN (`mrn`)** in log entries and registry imports. They are needed so credentialing/privileging authorities can verify each case against hospital records.
-- Purpose (owner's statement, 2026-11-25): the log book is for private/personal record keeping. Its contents are shared only with healthcare professional governing bodies and authorities (credentialing, privileging, regulatory).
 - Always include these fields when converting hospital registry or OT data into this log book.
 - **Hard rule: identifiable patient data must never be committed or pushed to this repository (it is PUBLIC)**, and must never be put in issues, PR text, commit messages, artifacts or any external service. Generated import files go in `data/`, which is git-ignored. Before every commit, check that `git status` shows no data files.
 - Show identifiers in chat replies only when needed. Summaries use counts and case refs (e.g. `SR-6700`).
